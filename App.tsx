@@ -4,8 +4,8 @@ import Sidebar from './components/Sidebar';
 import Inspector from './components/Inspector';
 import LoadingOverlay from './components/LoadingOverlay';
 import AIModal from './components/AIModal';
-import { LightingConfig, ModelData, TransformMode, SceneMesh, TextureTransform, MeshConfig, MeshPhysicalTransform, ProjectFile, CameraState, AIModelType } from './types';
-import { generateAIRender } from './services/geminiService';
+import { LightingConfig, ModelData, TransformMode, SceneMesh, TextureTransform, MeshConfig, MeshPhysicalTransform, ProjectFile, CameraState, AIModelType, JimengConfig } from './types';
+import { generateJimengRender } from './services/jimengService';
 import { X } from 'lucide-react';
 import * as THREE from 'three';
 
@@ -70,7 +70,7 @@ function App() {
   // AI State
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
-  const [aiModel, setAiModel] = useState<AIModelType>('gemini-2.5-flash-image');
+  const [aiModel, setAiModel] = useState<AIModelType>('jimeng_t2i_v40');
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -229,32 +229,21 @@ function App() {
 
   const handleOpenAIModal = () => {
     setShowAIModal(true);
-    setAiResult(null); // Clear previous result when opening new session
+    // Keep previous prompt but clear result
+    setAiResult(null); 
   };
 
-  const handleGenerateAI = async () => {
-    if (!glRef.current) {
-      setErrorMessage("无法获取场景数据，请重试");
-      return;
-    }
-    
+  const handleGenerateAI = async (config: JimengConfig, refUrl: string | null, scale: number) => {
     setIsGeneratingAI(true);
     setErrorMessage(null);
     setAiResult(null);
 
     try {
-      // 1. Capture current scene
-      const canvas = glRef.current.domElement;
-      // Use higher quality for AI
-      const base64 = canvas.toDataURL('image/png', 0.95);
-      
-      // 2. Call API
-      const result = await generateAIRender(base64, aiPrompt, aiModel);
-      setAiResult(result);
-
+      const resultUrl = await generateJimengRender(config, aiPrompt, refUrl, scale);
+      setAiResult(resultUrl);
     } catch (e: any) {
       console.error("AI Generation Error", e);
-      setErrorMessage(e.message || "生成失败，请检查网络或重试");
+      setErrorMessage(e.message || "生成失败，请检查密钥或网络");
     } finally {
       setIsGeneratingAI(false);
     }

@@ -1,6 +1,6 @@
-import React from 'react';
-import { X, Sparkles, Download, Loader2, Wand2 } from 'lucide-react';
-import { AIModelType } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Sparkles, Download, Loader2, Wand2, Key, Link as LinkIcon, Settings2, Info } from 'lucide-react';
+import { AIModelType, JimengConfig } from '../types';
 
 interface AIModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface AIModalProps {
   setPrompt: (val: string) => void;
   model: AIModelType;
   setModel: (val: AIModelType) => void;
-  onGenerate: () => void;
+  onGenerate: (config: JimengConfig, refUrl: string | null, scale: number) => void;
   isGenerating: boolean;
   resultImage: string | null;
 }
@@ -25,16 +25,55 @@ const AIModal: React.FC<AIModalProps> = ({
   isGenerating,
   resultImage
 }) => {
+  // Config State
+  const [accessKey, setAccessKey] = useState('');
+  const [secretKey, setSecretKey] = useState('');
+  
+  // Params State
+  const [refImageUrl, setRefImageUrl] = useState('');
+  const [scale, setScale] = useState(0.5);
+  const [activeTab, setActiveTab] = useState<'config' | 'generate'>('config');
+
+  // Load saved keys
+  useEffect(() => {
+    const savedAK = localStorage.getItem('JIMENG_AK');
+    const savedSK = localStorage.getItem('JIMENG_SK');
+    if (savedAK) setAccessKey(savedAK);
+    if (savedSK) setSecretKey(savedSK);
+    
+    if (savedAK && savedSK) {
+        setActiveTab('generate');
+    }
+  }, []);
+
+  const handleSaveKeys = () => {
+      localStorage.setItem('JIMENG_AK', accessKey);
+      localStorage.setItem('JIMENG_SK', secretKey);
+      setActiveTab('generate');
+  };
+
+  const handleGenerateClick = () => {
+      if (!accessKey || !secretKey) {
+          setActiveTab('config');
+          return;
+      }
+      onGenerate(
+          { accessKey, secretKey }, 
+          refImageUrl.trim() ? refImageUrl.trim() : null, 
+          scale
+      );
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-[#252525] w-full max-w-6xl rounded-lg border border-[#333] shadow-2xl flex flex-col h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#333] bg-[#2a2a2a] flex-shrink-0">
           <div className="flex items-center space-x-2 text-white">
             <Sparkles className="w-5 h-5 text-orange-500" />
-            <h2 className="font-bold text-sm tracking-wide">AI 智能渲染生成器</h2>
+            <h2 className="font-bold text-sm tracking-wide">即梦 (Jimeng) AI 渲染器</h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -42,55 +81,142 @@ const AIModal: React.FC<AIModalProps> = ({
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          {/* Controls - Left Side (Narrower) */}
-          <div className="w-full md:w-1/3 p-6 flex flex-col border-r border-[#333] bg-[#202020] overflow-y-auto">
-            <div className="space-y-6 flex-1">
-              <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">提示词 (Prompt)</label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="描述你想要的灯光、材质、氛围或背景环境。例如：'专业的摄影棚灯光，柔和的阴影，放在大理石台面上，电影级质感'..."
-                  className="w-full h-48 bg-[#1a1a1a] border border-[#333] rounded p-3 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none placeholder-gray-600 transition-colors custom-scrollbar"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">模型 (Model)</label>
-                <div className="p-3 rounded border bg-orange-900/10 border-orange-500/50 text-orange-100 flex items-start">
-                   <div className="flex-1">
-                      <div className="text-xs font-bold mb-0.5 flex items-center">
-                        Gemini 2.5 Flash
-                        <span className="ml-2 px-1.5 py-0.5 bg-orange-500 text-black text-[9px] rounded font-bold uppercase">Fast</span>
-                      </div>
-                      <div className="text-[10px] opacity-70">快速生成，高效验证创意方向</div>
-                   </div>
-                </div>
-              </div>
+          {/* Controls - Left Side */}
+          <div className="w-full md:w-1/3 border-r border-[#333] bg-[#202020] flex flex-col">
+            
+            {/* Tabs */}
+            <div className="flex border-b border-[#333]">
+                <button 
+                    onClick={() => setActiveTab('config')}
+                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider ${activeTab === 'config' ? 'bg-[#252525] text-orange-500 border-b-2 border-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    API 设置
+                </button>
+                <button 
+                    onClick={() => setActiveTab('generate')}
+                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider ${activeTab === 'generate' ? 'bg-[#252525] text-orange-500 border-b-2 border-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    生成参数
+                </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-[#333]">
-              <button
-                onClick={onGenerate}
-                disabled={isGenerating || !prompt.trim()}
-                className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-bold rounded shadow-lg hover:from-orange-500 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-[0.98]"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    AI 正在思考和绘制...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-5 h-5 mr-2" />
-                    开始生成渲染图
-                  </>
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                
+                {activeTab === 'config' && (
+                    <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
+                         <div className="bg-orange-900/20 border border-orange-500/30 p-3 rounded text-orange-200 text-xs">
+                             <Info className="w-4 h-4 inline mr-1 mb-0.5" />
+                             请配置火山引擎（即梦）API 访问密钥。密钥将仅存储在您的本地浏览器中。
+                         </div>
+
+                         <div>
+                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">Access Key ID</label>
+                            <div className="relative">
+                                <Key className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                                <input 
+                                    type="text" 
+                                    value={accessKey}
+                                    onChange={(e) => setAccessKey(e.target.value)}
+                                    placeholder="AK..."
+                                    className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                                />
+                            </div>
+                         </div>
+
+                         <div>
+                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">Secret Access Key</label>
+                            <div className="relative">
+                                <Key className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                                <input 
+                                    type="password" 
+                                    value={secretKey}
+                                    onChange={(e) => setSecretKey(e.target.value)}
+                                    placeholder="SK..."
+                                    className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                                />
+                            </div>
+                         </div>
+
+                         <button
+                            onClick={handleSaveKeys}
+                            className="w-full py-2 bg-[#333] border border-gray-600 text-gray-200 text-xs font-bold rounded hover:bg-[#444] transition-colors"
+                         >
+                            保存并继续
+                         </button>
+                    </div>
                 )}
-              </button>
+
+                {activeTab === 'generate' && (
+                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">参考图链接 (可选)</label>
+                            <div className="relative">
+                                <LinkIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                                <input
+                                    type="text"
+                                    value={refImageUrl}
+                                    onChange={(e) => setRefImageUrl(e.target.value)}
+                                    placeholder="https://example.com/image.jpg"
+                                    className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-xs text-gray-200 focus:border-orange-500 focus:outline-none placeholder-gray-600"
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-500 mt-1">
+                                * 即梦 API 仅支持公网可访问的图片 URL。如不填写，将进行纯文生图。
+                            </p>
+                        </div>
+
+                        <div>
+                            <div className="flex justify-between mb-2">
+                                <label className="block text-xs text-gray-400 uppercase font-bold tracking-wider">参考程度 (Scale)</label>
+                                <span className="text-xs text-orange-500 font-mono">{scale.toFixed(2)}</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="0" max="1" step="0.01"
+                                value={scale}
+                                onChange={(e) => setScale(parseFloat(e.target.value))}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                            />
+                            <p className="text-[10px] text-gray-500 mt-1">
+                                数值越大，文本描述对结果的影响越大；数值越小，参考图的影响越大。
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">提示词 (Prompt)</label>
+                            <textarea
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                placeholder="描述你想要的画面，例如：专业的包装摄影，柔和的影棚光，4k高画质..."
+                                className="w-full h-32 bg-[#1a1a1a] border border-[#333] rounded p-3 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none placeholder-gray-600 custom-scrollbar"
+                            />
+                        </div>
+
+                        <div className="pt-4 border-t border-[#333]">
+                            <button
+                                onClick={handleGenerateClick}
+                                disabled={isGenerating || !prompt.trim()}
+                                className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-bold rounded shadow-lg hover:from-orange-500 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-[0.98]"
+                            >
+                                {isGenerating ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    云端渲染中...
+                                </>
+                                ) : (
+                                <>
+                                    <Wand2 className="w-5 h-5 mr-2" />
+                                    开始生成
+                                </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
           </div>
 
-          {/* Result - Right Side (Larger) */}
+          {/* Result - Right Side */}
           <div className="w-full md:w-2/3 bg-[#151515] relative overflow-hidden group flex items-center justify-center">
             <div className="absolute inset-0 pattern-grid opacity-10 pointer-events-none"></div>
             
@@ -100,21 +226,22 @@ const AIModal: React.FC<AIModalProps> = ({
                 <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                   <a
                     href={resultImage}
-                    download={`packviz-ai-${Date.now()}.png`}
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-6 py-3 bg-white text-black font-bold rounded-full flex items-center hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(0,0,0,0.5)]"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    下载高清原图
+                    查看原图 (链接有效期24h)
                   </a>
                 </div>
               </div>
             ) : (
               <div className="text-center text-gray-600 flex flex-col items-center p-8">
                 <div className="w-24 h-24 rounded-full bg-[#1e1e1e] flex items-center justify-center mb-6 border border-[#333]">
-                    <Sparkles className="w-10 h-10 opacity-20" />
+                    <Settings2 className="w-10 h-10 opacity-20" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-500 mb-2">准备就绪</h3>
-                <p className="text-sm opacity-50 max-w-xs">当前 3D 视口将作为构图参考，AI 将基于您的提示词生成高保真渲染图。</p>
+                <h3 className="text-lg font-medium text-gray-500 mb-2">等待生成</h3>
+                <p className="text-sm opacity-50 max-w-xs">配置 API Key 并输入提示词后，即可调用即梦 (Jimeng) 进行专业级渲染。</p>
               </div>
             )}
           </div>

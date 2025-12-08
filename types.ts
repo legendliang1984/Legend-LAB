@@ -77,4 +77,10 @@ export interface ProjectFile {
   assets: Record<string, string>; 
 }
 
-export type AIModelType = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+// Jimeng API Configuration
+export interface JimengConfig {
+  accessKey: string;
+  secretKey: string;
+}
+
+export type AIModelType = 'jimeng_t2i_v40';
