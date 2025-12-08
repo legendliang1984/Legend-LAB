@@ -1,45 +1,106 @@
-import React, { Suspense, useEffect, useState, useRef } from 'react';
+import React, { Suspense, useEffect, useState, useRef, useImperativeHandle } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { 
   OrbitControls, 
   Stage, 
   TransformControls, 
   Environment, 
-  Grid
+  Grid,
+  ContactShadows
 } from '@react-three/drei';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
-import { LightingConfig, ModelData, TransformMode, SceneMesh, MeshConfig, MeshPhysicalTransform, CameraState } from '../types';
+import { LightingConfig, ModelData, TransformMode, SceneMesh, MeshConfig, CameraConfig, CameraState, RenderConfig } from '../types';
+import RenderEffects from './RenderEffects';
 
 interface SceneProps {
   modelData: ModelData | null;
   transformMode: TransformMode;
   lighting: LightingConfig;
+  cameraConfig: CameraConfig;
+  renderConfig: RenderConfig;
   meshConfigs: Record<string, MeshConfig>;
-  meshTransforms: Record<string, MeshPhysicalTransform>;
   onMeshSelect: (meshName: string | null) => void;
   selectedMeshName: string | null;
   setGlRef: (gl: THREE.WebGLRenderer | null) => void;
   onMeshesLoaded: (meshes: SceneMesh[]) => void;
-  onTransformChange: (meshName: string, transform: MeshPhysicalTransform) => void;
-  onTransformEnd: () => void;
-  // Camera
   cameraStateRef: React.MutableRefObject<CameraState | null>;
-  targetCameraState: CameraState | null;
-  onCameraRestored: () => void;
-  shouldResetCamera: boolean; // Manual reset to default
-  onCameraResetComplete: () => void;
+  initialCameraState?: CameraState | null;
 }
 
-// Component to handle Model Loading & Texture Application & Physical Transforms
+// Track camera state for saving
+const CameraTracker: React.FC<{ stateRef: React.MutableRefObject<CameraState | null> }> = ({ stateRef }) => {
+    const { camera, controls } = useThree();
+    useFrame(() => {
+        if (controls) {
+            const orbit = controls as any;
+            stateRef.current = {
+                position: camera.position.toArray() as [number, number, number],
+                target: orbit.target.toArray() as [number, number, number]
+            };
+        }
+    });
+    return null;
+};
+
+// Rig to handle Camera Lens Effects, Viewport Light, and Restore State
+const CameraRig: React.FC<{ 
+    config: CameraConfig, 
+    lightIntensity: number,
+    initialState?: CameraState | null
+}> = ({ config, lightIntensity, initialState }) => {
+    const { camera, controls } = useThree();
+    const lightRef = useRef<THREE.PointLight>(null);
+    const initialized = useRef(false);
+
+    // Restore Camera Position on Load
+    useEffect(() => {
+        if (initialState && !initialized.current && controls) {
+            camera.position.set(...initialState.position);
+            (controls as any).target.set(...initialState.target);
+            camera.updateProjectionMatrix();
+            (controls as any).update();
+            initialized.current = true;
+        }
+    }, [initialState, camera, controls]);
+
+    useFrame(() => {
+        if (camera instanceof THREE.PerspectiveCamera) {
+            // Apply Lens settings
+            camera.setFocalLength(config.focalLength);
+            
+            // Film Offset (Lens Shift)
+            if (config.filmOffset !== 0) {
+                 camera.setViewOffset(
+                    window.innerWidth, 
+                    window.innerHeight, 
+                    config.filmOffset * -1, 
+                    0, 
+                    window.innerWidth, 
+                    window.innerHeight
+                );
+            } else {
+                camera.clearViewOffset();
+            }
+            camera.updateProjectionMatrix();
+        }
+
+        // Camera Light Follow
+        if (lightRef.current) {
+            lightRef.current.position.copy(camera.position);
+        }
+    });
+
+    return <pointLight ref={lightRef} intensity={lightIntensity} decay={0} distance={0} color="#ffffff" />;
+};
+
 const Model: React.FC<{ 
   modelData: ModelData; 
   meshConfigs: Record<string, MeshConfig>;
-  meshTransforms: Record<string, MeshPhysicalTransform>;
   onMeshSelect: (name: string | null) => void; 
   onMeshesLoaded: (meshes: SceneMesh[]) => void;
-}> = ({ modelData, meshConfigs, meshTransforms, onMeshSelect, onMeshesLoaded }) => {
+}> = ({ modelData, meshConfigs, onMeshSelect, onMeshesLoaded }) => {
   const [obj, setObj] = useState<THREE.Group | null>(null);
 
   // Load Model
@@ -56,7 +117,6 @@ const Model: React.FC<{
 
       const foundMeshes: SceneMesh[] = [];
 
-      // Pre-process model
       group.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
@@ -64,11 +124,14 @@ const Model: React.FC<{
           mesh.receiveShadow = true;
           if (!mesh.name) mesh.name = `Part_${mesh.id}`;
           
-          // Ensure standard material with white base
           if (!(mesh.material instanceof THREE.MeshStandardMaterial)) {
-             mesh.material = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+             mesh.material = new THREE.MeshStandardMaterial({ 
+                 color: 0xffffff, 
+                 side: THREE.DoubleSide,
+                 roughness: 0.5,
+                 metalness: 0.1
+            });
           } else {
-             // If existing material, ensure it's white to show texture color correctly
              (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xffffff);
           }
 
@@ -85,34 +148,24 @@ const Model: React.FC<{
     }, undefined, (err) => console.error("Error loading model", err));
   }, [modelData]);
 
-  // Apply Mesh Physical Transforms (Position/Rotation/Scale) from History State
-  useEffect(() => {
-    if (!obj) return;
-    obj.traverse((child) => {
-       if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const transform = meshTransforms[mesh.name];
-          if (transform) {
-             mesh.position.set(...transform.position);
-             mesh.rotation.set(...transform.rotation);
-             mesh.scale.set(...transform.scale);
-          }
-       }
-    });
-  }, [obj, meshTransforms]);
-
-
-  // Apply Textures Logic
+  // Apply Textures & Visibility Logic
   useEffect(() => {
     if (!obj) return;
 
-    // We traverse the object to apply or remove textures based on meshConfigs
     obj.traverse((child) => {
        if ((child as THREE.Mesh).isMesh) {
            const mesh = child as THREE.Mesh;
            const config = meshConfigs[mesh.name];
            const material = mesh.material as THREE.MeshStandardMaterial;
 
+           // Visibility
+           if (config) {
+               mesh.visible = config.visible;
+           } else {
+               mesh.visible = true; // Default visible
+           }
+
+           // Texture
            if (config && config.textureUrl) {
                 if (material.userData.currentTextureUrl !== config.textureUrl) {
                     const loader = new THREE.TextureLoader();
@@ -134,10 +187,9 @@ const Model: React.FC<{
     });
   }, [meshConfigs, obj]);
 
-  // Apply Transforms to Textures (Animation Frame)
+  // Apply Transforms (Animation Frame)
   useFrame(() => {
       if (!obj) return;
-      
       obj.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
@@ -147,7 +199,6 @@ const Model: React.FC<{
               if (mat.map && config) {
                   const tex = mat.map;
                   const t = config.transform;
-                  
                   tex.offset.set(t.offsetX, t.offsetY);
                   tex.repeat.set(t.repeatX, t.repeatY);
                   tex.rotation = t.rotation * (Math.PI / 180);
@@ -163,7 +214,9 @@ const Model: React.FC<{
   const handlePointerDown = (e: any) => {
     e.stopPropagation();
     const mesh = e.object as THREE.Mesh;
-    onMeshSelect(mesh.name);
+    if (mesh.visible) {
+        onMeshSelect(mesh.name);
+    }
   };
 
   const handlePointerMissed = () => {
@@ -181,73 +234,19 @@ const Model: React.FC<{
   );
 };
 
-// Component to track camera changes and update ref
-const CameraTracker: React.FC<{ 
-  cameraStateRef: React.MutableRefObject<CameraState | null>
-}> = ({ cameraStateRef }) => {
-  const { camera, controls } = useThree();
-  
-  useFrame(() => {
-    if (controls) {
-      const orbit = controls as any;
-      cameraStateRef.current = {
-        position: [camera.position.x, camera.position.y, camera.position.z],
-        target: [orbit.target.x, orbit.target.y, orbit.target.z]
-      };
-    }
-  });
-  return null;
-};
-
-// Camera Rig to handle reset and restore
-const CameraRig: React.FC<{ 
-  shouldReset: boolean; 
-  onResetComplete: () => void;
-  targetState: CameraState | null;
-  onRestoreComplete: () => void;
-}> = ({ shouldReset, onResetComplete, targetState, onRestoreComplete }) => {
-  const controlsRef = useRef<any>(null);
-  const { camera } = useThree();
-  
-  // Handle default reset
-  useEffect(() => {
-    if (shouldReset && controlsRef.current) {
-      controlsRef.current.reset();
-      onResetComplete();
-    }
-  }, [shouldReset, onResetComplete]);
-
-  // Handle specific state restore (from load)
-  useEffect(() => {
-    if (targetState && controlsRef.current) {
-      camera.position.set(...targetState.position);
-      controlsRef.current.target.set(...targetState.target);
-      controlsRef.current.update();
-      onRestoreComplete();
-    }
-  }, [targetState, onRestoreComplete, camera]);
-
-  return <OrbitControls ref={controlsRef} makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 1.75} />;
-};
-
-
 const SceneContent: React.FC<SceneProps> = ({ 
   modelData, 
   transformMode, 
   lighting,
+  cameraConfig,
+  renderConfig,
   meshConfigs,
-  meshTransforms,
   onMeshSelect,
   selectedMeshName,
   setGlRef,
   onMeshesLoaded,
-  onTransformChange,
-  onTransformEnd,
   cameraStateRef,
-  targetCameraState,
-  onCameraRestored,
-  shouldResetCamera,
-  onCameraResetComplete
+  initialCameraState
 }) => {
   const { gl, scene } = useThree();
   
@@ -256,19 +255,11 @@ const SceneContent: React.FC<SceneProps> = ({
     return () => setGlRef(null);
   }, [gl, setGlRef]);
 
-  // Apply Tone Mapping Exposure
-  useEffect(() => {
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
-    gl.toneMappingExposure = lighting.sceneExposure;
-  }, [gl, lighting.sceneExposure]);
-
-  // Handle Environment Rotation
   useEffect(() => {
       scene.environmentRotation.set(0, lighting.environmentRotation * (Math.PI / 180), 0);
       scene.backgroundRotation.set(0, lighting.environmentRotation * (Math.PI / 180), 0);
   }, [lighting.environmentRotation, scene]);
 
-  // Find the actual THREE object that corresponds to the selected name
   const [selectedObject, setSelectedObject] = useState<THREE.Object3D | undefined>(undefined);
 
   useEffect(() => {
@@ -280,63 +271,61 @@ const SceneContent: React.FC<SceneProps> = ({
     setSelectedObject(found);
   }, [selectedMeshName, scene, modelData]);
 
-  // Transform Controls Handling
-  const handleObjectChange = (e: any) => {
-      if (!selectedMeshName || !e.target.object) return;
-      const obj = e.target.object;
-      
-      onTransformChange(selectedMeshName, {
-          position: [obj.position.x, obj.position.y, obj.position.z],
-          rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
-          scale: [obj.scale.x, obj.scale.y, obj.scale.z]
-      });
-  };
-
   return (
     <>
       <color attach="background" args={['#1c1c1c']} />
       
+      <CameraTracker stateRef={cameraStateRef} />
+      <CameraRig config={cameraConfig} lightIntensity={lighting.cameraLightIntensity} initialState={initialCameraState} />
+
       {/* Base Lighting */}
       <ambientLight intensity={lighting.ambientIntensity} />
       <directionalLight 
         position={lighting.directionalPosition} 
         intensity={lighting.directionalIntensity} 
         castShadow 
-        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.001}
       />
       
-      {/* Environment / HDR */}
+      {/* Environment */}
       {lighting.environmentUrl ? (
-          <Environment 
-            files={lighting.environmentUrl} 
-            background={lighting.backgroundVisible} 
-            blur={lighting.backgroundBlur}
-          />
+          <Environment files={lighting.environmentUrl} background={lighting.backgroundVisible} blur={lighting.backgroundBlur} />
       ) : (
-        <Environment 
-            preset={lighting.environmentPreset as any} 
-            background={lighting.backgroundVisible}
-            blur={lighting.backgroundBlur}
-        />
+        <Environment preset={lighting.environmentPreset as any} background={lighting.backgroundVisible} blur={lighting.backgroundBlur} />
       )}
 
-      {/* Grid - Made slightly brighter for visibility */}
+      {/* High Quality Render Effects (Post Processing) */}
+      <RenderEffects config={renderConfig} />
+
+      {/* Ground Contact Shadows (Blender-like grounding) */}
+      <ContactShadows 
+        opacity={0.6} 
+        scale={20} 
+        blur={2} 
+        far={4.5} 
+        resolution={1024} 
+        color="#000000" 
+      />
+
+      {/* Helper Grid (Only visible when no render mode, but keeping it for now) */}
       <Grid 
         infiniteGrid 
         fadeDistance={50} 
-        fadeStrength={4} 
-        sectionColor="#555" 
-        cellColor="#333" 
+        fadeStrength={2}
+        sectionColor="#444" 
+        sectionThickness={1}
+        cellColor="#2a2a2a" 
+        cellThickness={0.5}
         position={[0, -0.01, 0]}
+        args={[20, 20]}
       />
 
       <Suspense fallback={null}>
-        <Stage intensity={0.2} environment={null} adjustCamera={false}>
+        <Stage intensity={0} environment={null} adjustCamera={false} shadows={false}>
           {modelData && (
             <Model 
               modelData={modelData} 
               meshConfigs={meshConfigs}
-              meshTransforms={meshTransforms}
               onMeshSelect={onMeshSelect}
               onMeshesLoaded={onMeshesLoaded}
             />
@@ -344,30 +333,27 @@ const SceneContent: React.FC<SceneProps> = ({
         </Stage>
       </Suspense>
       
-      {selectedObject && (
+      {selectedObject && selectedObject.visible && (
         <TransformControls 
           object={selectedObject} 
           mode={transformMode} 
           size={0.8}
-          onObjectChange={handleObjectChange}
-          onMouseUp={onTransformEnd} 
         />
       )}
 
-      <CameraTracker cameraStateRef={cameraStateRef} />
-      <CameraRig 
-        shouldReset={shouldResetCamera} 
-        onResetComplete={onCameraResetComplete}
-        targetState={targetCameraState}
-        onRestoreComplete={onCameraRestored}
-      />
+      <OrbitControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 1.75} />
     </>
   );
 };
 
 const Scene: React.FC<SceneProps> = (props) => {
   return (
-    <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 3, 6], fov: 40 }} gl={{ preserveDrawingBuffer: true }}>
+    <Canvas 
+        shadows 
+        dpr={[1, 2]} 
+        camera={{ position: [0, 3, 6], fov: 40 }} 
+        gl={{ preserveDrawingBuffer: true }}
+    >
       <SceneContent {...props} />
     </Canvas>
   );
