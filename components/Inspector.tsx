@@ -106,7 +106,7 @@ const Inspector: React.FC<InspectorProps> = ({
            </div>
            {selectedMeshName ? (
              <div className="mt-2 text-[10px] text-orange-400 truncate font-mono">
-               >> {selectedMeshName}
+               &gt;&gt; {selectedMeshName}
              </div>
            ) : (
              <div className="mt-2 text-[10px] text-gray-600">
