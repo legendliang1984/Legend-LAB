@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/jimeng(.*)",
+      "destination": "https://visual.volcengineapi.com$1"
+    }
+  ]
+}

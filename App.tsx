@@ -4,8 +4,8 @@ import Sidebar from './components/Sidebar';
 import Inspector from './components/Inspector';
 import LoadingOverlay from './components/LoadingOverlay';
 import AIModal from './components/AIModal';
-import { LightingConfig, ModelData, TransformMode, SceneMesh, TextureTransform, MeshConfig, MeshPhysicalTransform, ProjectFile, CameraState, AIModelType, JimengConfig } from './types';
-import { generateJimengRender } from './services/jimengService';
+import { LightingConfig, ModelData, TransformMode, SceneMesh, TextureTransform, MeshConfig, MeshPhysicalTransform, ProjectFile, CameraState, AIModelType, GeminiConfig } from './types';
+import { generateAIRender } from './services/geminiService';
 import { X } from 'lucide-react';
 import * as THREE from 'three';
 
@@ -70,7 +70,7 @@ function App() {
   // AI State
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
-  const [aiModel, setAiModel] = useState<AIModelType>('jimeng_t2i_v40');
+  const [aiModel, setAiModel] = useState<AIModelType>('gemini-2.5-flash-image');
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
@@ -233,14 +233,25 @@ function App() {
     setAiResult(null); 
   };
 
-  const handleGenerateAI = async (config: JimengConfig, refUrl: string | null, scale: number) => {
+  const handleGenerateAI = async (config: GeminiConfig) => {
     setIsGeneratingAI(true);
     setErrorMessage(null);
     setAiResult(null);
 
     try {
-      const resultUrl = await generateJimengRender(config, aiPrompt, refUrl, scale);
-      setAiResult(resultUrl);
+        // 1. Capture Scene as Base64 Reference
+        let imageBase64 = '';
+        if (glRef.current) {
+            // Force a render to ensure latest state
+            glRef.current.render(glRef.current.scene, glRef.current.camera);
+            imageBase64 = glRef.current.domElement.toDataURL('image/jpeg', 0.9);
+        } else {
+            throw new Error("无法获取3D场景图像，请刷新后重试");
+        }
+
+        // 2. Call Gemini Service
+        const resultUrl = await generateAIRender(imageBase64, aiPrompt, config);
+        setAiResult(resultUrl);
     } catch (e: any) {
       console.error("AI Generation Error", e);
       setErrorMessage(e.message || "生成失败，请检查密钥或网络");

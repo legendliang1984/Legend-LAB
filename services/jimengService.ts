@@ -24,16 +24,16 @@ function getSigningKey(sk: string, date: string, region: string, service: string
   return kSigning;
 }
 
+// 核心修复：Payload 一致性 & Host Header 处理
 function signRequest(
   config: JimengConfig,
   method: string,
   query: Record<string, string>,
-  body: any,
+  payloadStr: string, // Accept pre-stringified payload
   action: string,
   version: string
 ) {
   const dateObj = new Date();
-  // Format: YYYYMMDDTHHMMSSZ
   const xDate = dateObj.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const shortDate = getKDate(xDate);
   
@@ -47,9 +47,10 @@ function signRequest(
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(queryParams[key])}`)
     .join('&');
 
-  const payload = JSON.stringify(body);
-  const payloadHash = CryptoJS.SHA256(payload).toString(CryptoJS.enc.Hex);
+  // SHA256 Hash of the payload string
+  const payloadHash = CryptoJS.SHA256(payloadStr).toString(CryptoJS.enc.Hex);
   
+  // IMPORTANT: Host IS included in calculation, but NOT in returned headers for fetch
   const signedHeaders = 'content-type;host;x-date';
   const canonicalHeaders = `content-type:${CONTENT_TYPE}\nhost:${HOST}\nx-date:${xDate}\n`;
 
@@ -79,46 +80,71 @@ function signRequest(
   // 4. Authorization Header
   const authorization = `${algorithm} Credential=${config.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
+  // NOTE: Do NOT include 'Host' here. Browser sets it automatically.
   return {
-    Authorization: authorization,
-    'X-Date': xDate,
-    'Content-Type': CONTENT_TYPE,
-    'Host': HOST
+    headers: {
+      'Authorization': authorization,
+      'X-Date': xDate,
+      'Content-Type': CONTENT_TYPE,
+    },
+    canonicalQueryString // Return this so we can use it in the URL
   };
 }
 
 // --- API Methods ---
 
-const submitTask = async (config: JimengConfig, prompt: string, refImageUrl: string | null, scale: number = 0.5) => {
+const submitTask = async (config: JimengConfig, prompt: string) => {
   const action = 'CVSync2AsyncSubmitTask';
   const version = '2022-08-31';
   
-  const body: any = {
+  const body = {
     req_key: 'jimeng_t2i_v40',
     prompt: prompt,
-    // If refImageUrl exists, this is Image-to-Image (or mixed), otherwise Text-to-Image
-    image_urls: refImageUrl ? [refImageUrl] : [], 
-    scale: scale, // Reference image weight
-    force_single: true, // Save cost/time for preview
-    // Request 2K resolution by default for high quality
     width: 2048,
-    height: 2048
+    height: 2048,
+    // No image_urls
   };
 
-  const headers = signRequest(config, 'POST', {}, body, action, version);
-  const url = `https://${HOST}?Action=${action}&Version=${version}`;
+  const payloadStr = JSON.stringify(body);
+  const { headers, canonicalQueryString } = signRequest(config, 'POST', {}, payloadStr, action, version);
+  
+  // FIX: Use canonicalQueryString directly to ensure URL matches signature EXACTLY
+  // Note: /api/jimeng is the local/Netlify proxy path
+  const url = `/api/jimeng?${canonicalQueryString}`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(body)
-  });
+  try {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: payloadStr
+    });
 
-  const result = await response.json();
-  if (result.code !== 10000) {
-    throw new Error(result.message || 'Task submission failed');
+    // Handle Proxy Errors (e.g., 404 Not Found, 502 Bad Gateway from Netlify)
+    const contentType = response.headers.get("content-type");
+    if (!response.ok || (contentType && contentType.includes("text/html"))) {
+        const textError = await response.text();
+        console.error(`Jimeng HTTP Error (${response.status}):`, textError);
+        
+        if (textError.includes("Page Not Found") || response.status === 404) {
+           throw new Error("代理路径错误 (404)。请检查 Netlify 部署配置。");
+        }
+        
+        // Try to extract a meaningful message if it's HTML
+        const cleanMsg = textError.replace(/<[^>]*>?/gm, '').substring(0, 100);
+        throw new Error(`网络请求失败 (${response.status}): ${cleanMsg}...`);
+    }
+
+    const result = await response.json();
+    
+    if (result.code !== 10000) {
+        console.error("Jimeng Submit Error:", result);
+        throw new Error(result.message || `API Error Code: ${result.code}`);
+    }
+    return result.data.task_id;
+  } catch (e: any) {
+    console.error("Submission Network/CORS Error:", e);
+    throw new Error(`${e.message}`);
   }
-  return result.data.task_id;
 };
 
 const getTaskResult = async (config: JimengConfig, taskId: string) => {
@@ -131,14 +157,21 @@ const getTaskResult = async (config: JimengConfig, taskId: string) => {
     req_json: JSON.stringify({ return_url: true })
   };
 
-  const headers = signRequest(config, 'POST', {}, body, action, version);
-  const url = `https://${HOST}?Action=${action}&Version=${version}`;
+  const payloadStr = JSON.stringify(body);
+  const { headers, canonicalQueryString } = signRequest(config, 'POST', {}, payloadStr, action, version);
+  
+  const url = `/api/jimeng?${canonicalQueryString}`;
 
   const response = await fetch(url, {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify(body)
+    body: payloadStr
   });
+
+  if (!response.ok) {
+      const textError = await response.text();
+      throw new Error(`Poll HTTP Error ${response.status}: ${textError.substring(0, 50)}`);
+  }
 
   return await response.json();
 };
@@ -147,13 +180,12 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export const generateJimengRender = async (
   config: JimengConfig,
-  prompt: string,
-  refImageUrl: string | null, // Must be a public http/https URL, cannot be base64
-  scale: number
+  prompt: string
 ): Promise<string> => {
   try {
     // 1. Submit
-    const taskId = await submitTask(config, prompt, refImageUrl, scale);
+    console.log("Submitting task to Jimeng (via proxy)...");
+    const taskId = await submitTask(config, prompt);
     console.log("Jimeng Task Submitted ID:", taskId);
 
     // 2. Poll
@@ -164,21 +196,26 @@ export const generateJimengRender = async (
       await sleep(2000); // Poll every 2 seconds
       const res = await getTaskResult(config, taskId);
       
-      console.log("Polling status:", res.data?.status);
+      console.log(`Polling attempt ${attempts + 1}:`, res.data?.status);
 
       if (res.data?.status === 'done') {
          if (res.data.image_urls && res.data.image_urls.length > 0) {
              return res.data.image_urls[0];
          }
-         throw new Error("Task done but no images returned");
-      } else if (res.data?.status === 'failed' || res.data?.status === 'not_found' || res.data?.status === 'expired') {
-         throw new Error(`Generation failed: ${res.data?.status}`);
+         throw new Error("任务完成但未返回图片链接");
+      } else if (res.data?.status === 'failed') {
+         throw new Error("AI生成失败，任务状态: failed");
+      } else if (res.data?.status === 'not_found' || res.data?.status === 'expired') {
+          // Sometimes it takes a moment for the task to be visible
+          if (attempts > 5) {
+             throw new Error(`任务已失效或未找到: ${res.data?.status}`);
+          }
       }
       
       attempts++;
     }
     
-    throw new Error("Generation timed out");
+    throw new Error("生成超时，请稍后重试");
 
   } catch (error: any) {
     console.error("Jimeng API Error:", error);

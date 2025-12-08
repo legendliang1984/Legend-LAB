@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { GeminiConfig } from '../types';
 
 // Helper to remove data URL prefix
 const stripDataUrl = (dataUrl: string) => {
@@ -13,11 +14,12 @@ const getMimeType = (dataUrl: string) => {
 export const generateAIRender = async (
   imageBase64: string,
   prompt: string,
+  config: GeminiConfig,
   modelName: string = 'gemini-2.5-flash-image'
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY;
+  const { apiKey } = config;
   if (!apiKey) {
-    throw new Error("缺少 API 密钥。请确保设置了 process.env.API_KEY。");
+    throw new Error("缺少 API 密钥。请在设置中配置 Gemini API Key。");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -27,19 +29,16 @@ export const generateAIRender = async (
   const mimeType = getMimeType(imageBase64);
 
   try {
-    // Constructing a prompt that treats the image as a reference for a high quality render.
+    // Constructing a prompt that treats the image as a reference
     const finalPrompt = `
-      你是一位专业的3D产品摄影师。
-      请使用提供的图片作为严格的构图和几何参考。
-      为这个包装设计生成一张逼真、高保真的渲染图。
-      
-      细节描述：${prompt}
+      你是一位专业的3D产品渲染师。
+      请参考提供的图片（构图、几何结构），根据以下描述生成一张高保真的产品渲染图：
+      ${prompt}
       
       要求：
-      - 优化材质表现（让纸板看起来像纸板，塑料看起来像塑料）。
-      - 添加专业的摄影棚灯光，包含柔和的阴影和轮廓光。
-      - 保持参考图中确切的透视角度和品牌标识可见。
-      - 高分辨率，4k 画质。
+      - 保持画面结构与参考图一致。
+      - 材质真实，光影自然。
+      - 高分辨率，细节丰富。
     `;
 
     const response = await ai.models.generateContent({
@@ -74,9 +73,10 @@ export const generateAIRender = async (
     const textPart = parts?.find(p => p.text);
     if (textPart) {
         console.warn("AI Response only text:", textPart.text);
+        throw new Error(`AI 未生成图片，返回信息: ${textPart.text}`);
     }
 
-    throw new Error("AI 未生成图片，可能由于提示词违规或服务繁忙，请重试。");
+    throw new Error("AI 未生成图片，请重试。");
 
   } catch (error: any) {
     console.error("Gemini AI Error:", error);

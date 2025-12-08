@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Download, Loader2, Wand2, Key, Link as LinkIcon, Settings2, Info } from 'lucide-react';
-import { AIModelType, JimengConfig } from '../types';
+import { X, Sparkles, Download, Loader2, Wand2, Key, Info, Settings2 } from 'lucide-react';
+import { AIModelType, GeminiConfig } from '../types';
 
 interface AIModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface AIModalProps {
   setPrompt: (val: string) => void;
   model: AIModelType;
   setModel: (val: AIModelType) => void;
-  onGenerate: (config: JimengConfig, refUrl: string | null, scale: number) => void;
+  onGenerate: (config: GeminiConfig) => void;
   isGenerating: boolean;
   resultImage: string | null;
 }
@@ -26,54 +26,38 @@ const AIModal: React.FC<AIModalProps> = ({
   resultImage
 }) => {
   // Config State
-  const [accessKey, setAccessKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  
-  // Params State
-  const [refImageUrl, setRefImageUrl] = useState('');
-  const [scale, setScale] = useState(0.5);
-  const [activeTab, setActiveTab] = useState<'config' | 'generate'>('config');
+  const [apiKey, setApiKey] = useState('');
+  const [activeTab, setActiveTab] = useState<'config' | 'generate'>('generate'); 
 
-  // Load saved keys
+  // Load saved key
   useEffect(() => {
-    const savedAK = localStorage.getItem('JIMENG_AK');
-    const savedSK = localStorage.getItem('JIMENG_SK');
-    if (savedAK) setAccessKey(savedAK);
-    if (savedSK) setSecretKey(savedSK);
-    
-    if (savedAK && savedSK) {
-        setActiveTab('generate');
-    }
+    const savedKey = localStorage.getItem('GEMINI_API_KEY');
+    if (savedKey) setApiKey(savedKey);
   }, []);
 
   const handleSaveKeys = () => {
-      localStorage.setItem('JIMENG_AK', accessKey);
-      localStorage.setItem('JIMENG_SK', secretKey);
+      localStorage.setItem('GEMINI_API_KEY', apiKey);
       setActiveTab('generate');
   };
 
   const handleGenerateClick = () => {
-      if (!accessKey || !secretKey) {
+      if (!apiKey) {
           setActiveTab('config');
           return;
       }
-      onGenerate(
-          { accessKey, secretKey }, 
-          refImageUrl.trim() ? refImageUrl.trim() : null, 
-          scale
-      );
+      onGenerate({ apiKey });
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#252525] w-full max-w-6xl rounded-lg border border-[#333] shadow-2xl flex flex-col h-[90vh]">
+      <div className="bg-[#252525] w-full max-w-6xl rounded-lg border border-[#333] shadow-2xl flex flex-col h-[85vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#333] bg-[#2a2a2a] flex-shrink-0">
           <div className="flex items-center space-x-2 text-white">
             <Sparkles className="w-5 h-5 text-orange-500" />
-            <h2 className="font-bold text-sm tracking-wide">即梦 (Jimeng) AI 渲染器</h2>
+            <h2 className="font-bold text-sm tracking-wide">Gemini Nano Banana (Flash Image)</h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <X className="w-5 h-5" />
@@ -106,32 +90,18 @@ const AIModal: React.FC<AIModalProps> = ({
                     <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
                          <div className="bg-orange-900/20 border border-orange-500/30 p-3 rounded text-orange-200 text-xs">
                              <Info className="w-4 h-4 inline mr-1 mb-0.5" />
-                             请配置火山引擎（即梦）API 访问密钥。密钥将仅存储在您的本地浏览器中。
+                             请提供 Google Gemini API Key 以使用 Nano Banana 模型。
                          </div>
 
                          <div>
-                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">Access Key ID</label>
-                            <div className="relative">
-                                <Key className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                                <input 
-                                    type="text" 
-                                    value={accessKey}
-                                    onChange={(e) => setAccessKey(e.target.value)}
-                                    placeholder="AK..."
-                                    className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
-                                />
-                            </div>
-                         </div>
-
-                         <div>
-                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">Secret Access Key</label>
+                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">Gemini API Key</label>
                             <div className="relative">
                                 <Key className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                                 <input 
                                     type="password" 
-                                    value={secretKey}
-                                    onChange={(e) => setSecretKey(e.target.value)}
-                                    placeholder="SK..."
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                    placeholder="AIzA..."
                                     className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
                                 />
                             </div>
@@ -141,57 +111,30 @@ const AIModal: React.FC<AIModalProps> = ({
                             onClick={handleSaveKeys}
                             className="w-full py-2 bg-[#333] border border-gray-600 text-gray-200 text-xs font-bold rounded hover:bg-[#444] transition-colors"
                          >
-                            保存并继续
+                            保存配置
                          </button>
                     </div>
                 )}
 
                 {activeTab === 'generate' && (
                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                        <div>
-                            <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">参考图链接 (可选)</label>
-                            <div className="relative">
-                                <LinkIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                                <input
-                                    type="text"
-                                    value={refImageUrl}
-                                    onChange={(e) => setRefImageUrl(e.target.value)}
-                                    placeholder="https://example.com/image.jpg"
-                                    className="w-full bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-3 py-2 text-xs text-gray-200 focus:border-orange-500 focus:outline-none placeholder-gray-600"
-                                />
-                            </div>
-                            <p className="text-[10px] text-gray-500 mt-1">
-                                * 即梦 API 仅支持公网可访问的图片 URL。如不填写，将进行纯文生图。
-                            </p>
-                        </div>
-
-                        <div>
-                            <div className="flex justify-between mb-2">
-                                <label className="block text-xs text-gray-400 uppercase font-bold tracking-wider">参考程度 (Scale)</label>
-                                <span className="text-xs text-orange-500 font-mono">{scale.toFixed(2)}</span>
-                            </div>
-                            <input 
-                                type="range" 
-                                min="0" max="1" step="0.01"
-                                value={scale}
-                                onChange={(e) => setScale(parseFloat(e.target.value))}
-                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                            />
-                            <p className="text-[10px] text-gray-500 mt-1">
-                                数值越大，文本描述对结果的影响越大；数值越小，参考图的影响越大。
-                            </p>
-                        </div>
-
+                        
+                        {/* Prompt Input */}
                         <div>
                             <label className="block text-xs text-gray-400 mb-2 uppercase font-bold tracking-wider">提示词 (Prompt)</label>
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="描述你想要的画面，例如：专业的包装摄影，柔和的影棚光，4k高画质..."
-                                className="w-full h-32 bg-[#1a1a1a] border border-[#333] rounded p-3 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none placeholder-gray-600 custom-scrollbar"
+                                placeholder="描述你想要的渲染效果，例如：置于大理石台面上，柔和的晨光，高品质商业摄影..."
+                                className="w-full h-48 bg-[#1a1a1a] border border-[#333] rounded p-3 text-sm text-gray-200 focus:border-orange-500 focus:outline-none resize-none placeholder-gray-600 custom-scrollbar"
                             />
                         </div>
+                        
+                        <div className="bg-[#1a1a1a] p-3 rounded border border-[#333] text-xs text-gray-500">
+                            系统将自动截取当前 3D 视口作为参考底图，AI 将基于底图和提示词生成逼真的渲染图。
+                        </div>
 
+                        {/* Generate Button */}
                         <div className="pt-4 border-t border-[#333]">
                             <button
                                 onClick={handleGenerateClick}
@@ -201,7 +144,7 @@ const AIModal: React.FC<AIModalProps> = ({
                                 {isGenerating ? (
                                 <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    云端渲染中...
+                                    AI 渲染中...
                                 </>
                                 ) : (
                                 <>
@@ -231,7 +174,7 @@ const AIModal: React.FC<AIModalProps> = ({
                     className="px-6 py-3 bg-white text-black font-bold rounded-full flex items-center hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(0,0,0,0.5)]"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    查看原图 (链接有效期24h)
+                    查看原图
                   </a>
                 </div>
               </div>
@@ -241,7 +184,7 @@ const AIModal: React.FC<AIModalProps> = ({
                     <Settings2 className="w-10 h-10 opacity-20" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-500 mb-2">等待生成</h3>
-                <p className="text-sm opacity-50 max-w-xs">配置 API Key 并输入提示词后，即可调用即梦 (Jimeng) 进行专业级渲染。</p>
+                <p className="text-sm opacity-50 max-w-xs">配置 API Key 并输入提示词，Gemini 将根据当前 3D 视图生成渲染图。</p>
               </div>
             )}
           </div>
