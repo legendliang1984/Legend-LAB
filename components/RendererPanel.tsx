@@ -60,7 +60,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
              <div className="space-y-3">
                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">环境光遮蔽</h3>
+                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">环境光遮蔽 (AO)</h3>
                     <button onClick={() => update('ao', !config.ao)} className="text-gray-400 hover:text-white">
                          {config.ao ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                     </button>
@@ -103,7 +103,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Bloom / Glare */}
                 <div>
                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">辉光</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">辉光 (Bloom)</h3>
                         <button onClick={() => update('bloom', !config.bloom)} className="text-gray-400 hover:text-white">
                              {config.bloom ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
@@ -120,7 +120,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Vignette */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">暗角</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">暗角 (Vignette)</h3>
                         <button onClick={() => update('vignette', !config.vignette)} className="text-gray-400 hover:text-white">
                              {config.vignette ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
