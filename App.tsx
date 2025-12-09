@@ -104,9 +104,9 @@ function App() {
   // Window Management
   const [windows, setWindows] = useState<WindowState[]>([
       { id: 'sidebar', title: '对象管理', isOpen: true, x: 20, y: 80, width: 300, height: 600, zIndex: 10 },
-      { id: 'renderer', title: '渲染器 (Octane Style)', isOpen: true, x: 340, y: 80, width: 300, height: 500, zIndex: 11 },
+      { id: 'renderer', title: '实时渲染器', isOpen: true, x: 340, y: 80, width: 300, height: 500, zIndex: 11 },
       { id: 'inspector', title: '属性面板', isOpen: true, x: window.innerWidth - 340, y: 80, width: 320, height: 700, zIndex: 10 },
-      { id: 'aipanel', title: 'AI 渲染 (Gemini 2.5)', isOpen: false, x: window.innerWidth / 2 - 200, y: 100, width: 400, height: 600, zIndex: 10 },
+      { id: 'aipanel', title: 'AI 渲染', isOpen: false, x: window.innerWidth / 2 - 200, y: 100, width: 400, height: 600, zIndex: 10 },
   ]);
 
   const updateWindow = (id: string, updates: Partial<WindowState>) => {

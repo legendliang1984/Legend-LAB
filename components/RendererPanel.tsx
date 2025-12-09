@@ -67,7 +67,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                  </div>
                  {config.ao && (
                     <>
-                        <SliderControl label="AO 强度" value={config.aoIntensity} min={0} max={5} step={0.1} onChange={(v) => update('aoIntensity', v)} />
+                        <SliderControl label="遮蔽强度" value={config.aoIntensity} min={0} max={5} step={0.1} onChange={(v) => update('aoIntensity', v)} />
                         <SliderControl label="采样半径" value={config.aoRadius} min={0.1} max={2} step={0.1} onChange={(v) => update('aoRadius', v)} />
                     </>
                  )}
@@ -88,7 +88,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                     
                     <div className="pt-2 border-t border-[#333] mt-2">
                         <label className="flex items-center justify-between text-[10px] text-gray-400 cursor-pointer">
-                           <span>ACES 色调映射</span>
+                           <span>电影级色调 (ACES)</span>
                            <input type="checkbox" checked={config.toneMapping} onChange={(e) => update('toneMapping', e.target.checked)} className="accent-orange-500" />
                         </label>
                     </div>

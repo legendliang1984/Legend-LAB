@@ -1,5 +1,5 @@
 {
-  "name": "PackViz Pro AI",
+  "name": "3D_to_AiRender",
   "description": "一款受 Cinema 4D 启发的专业 3D 包装可视化工具。上传 OBJ/GLB 模型，将贴图应用于特定网格区域，调整几何体，并使用 Gemini AI 生成逼真的渲染图。",
   "requestFramePermissions": []
 }
