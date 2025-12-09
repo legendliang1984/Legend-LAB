@@ -26,7 +26,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 onClick={() => update('enablePostProcessing', !config.enablePostProcessing)}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono ${config.enablePostProcessing ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}
             >
-                {config.enablePostProcessing ? '已启用 (ENABLED)' : '已禁用 (DISABLED)'}
+                {config.enablePostProcessing ? '已启用' : '已禁用'}
             </button>
       </div>
 
@@ -60,7 +60,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
              <div className="space-y-3">
                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">环境光遮蔽 (AO)</h3>
+                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">环境光遮蔽</h3>
                     <button onClick={() => update('ao', !config.ao)} className="text-gray-400 hover:text-white">
                          {config.ao ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                     </button>
@@ -88,7 +88,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                     
                     <div className="pt-2 border-t border-[#333] mt-2">
                         <label className="flex items-center justify-between text-[10px] text-gray-400 cursor-pointer">
-                           <span>ACES 色调映射 (Tone Mapping)</span>
+                           <span>ACES 色调映射</span>
                            <input type="checkbox" checked={config.toneMapping} onChange={(e) => update('toneMapping', e.target.checked)} className="accent-orange-500" />
                         </label>
                     </div>
@@ -103,7 +103,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Bloom / Glare */}
                 <div>
                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">辉光 (Bloom)</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">辉光</h3>
                         <button onClick={() => update('bloom', !config.bloom)} className="text-gray-400 hover:text-white">
                              {config.bloom ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
@@ -120,7 +120,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Vignette */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">暗角 (Vignette)</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">暗角</h3>
                         <button onClick={() => update('vignette', !config.vignette)} className="text-gray-400 hover:text-white">
                              {config.vignette ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>

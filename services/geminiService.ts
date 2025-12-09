@@ -1,14 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { AIAspectRatio } from "../types";
 
-// Fix for TypeScript build error: process is not defined
-declare const process: {
-  env: {
-    API_KEY: string;
-    [key: string]: string | undefined;
-  };
-};
-
 // Helper to remove data URL prefix
 const stripDataUrl = (dataUrl: string) => {
   return dataUrl.replace(/^data:image\/(png|jpeg|webp);base64,/, '');
