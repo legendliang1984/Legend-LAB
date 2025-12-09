@@ -80,6 +80,18 @@ const AIPanel: React.FC<AIPanelProps> = ({
       }
   }, [resultUrl]);
 
+  // Resolution Calculator
+  const getResolution = (ratio: AIAspectRatio) => {
+      const base = 1024;
+      switch(ratio) {
+          case '1:1': return `${base} x ${base}`;
+          case '4:3': return `${base} x 768`;
+          case '16:9': return `${base} x 576`;
+          case '9:16': return `576 x ${base}`;
+          default: return `${base} x ${base}`;
+      }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#1c1c1c] text-white">
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
@@ -98,7 +110,10 @@ const AIPanel: React.FC<AIPanelProps> = ({
 
             {/* Aspect Ratio Config */}
             <div>
-                 <label className="text-xs font-bold text-gray-400 mb-2 block flex items-center"><Ratio className="w-3 h-3 mr-1"/>生成比例</label>
+                 <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-gray-400 block flex items-center"><Ratio className="w-3 h-3 mr-1"/>生成比例</label>
+                    <span className="text-[10px] text-purple-400 font-mono">{getResolution(aspectRatio)} px</span>
+                 </div>
                  <div className="grid grid-cols-4 gap-2">
                      {(['1:1', '4:3', '16:9', '9:16'] as AIAspectRatio[]).map((ratio) => (
                          <button
