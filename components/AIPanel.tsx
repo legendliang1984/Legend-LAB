@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wand2, X, Plus, Image as ImageIcon, Loader2, Download, Move, Ratio } from 'lucide-react';
+import { Wand2, X, Plus, Image as ImageIcon, Loader2, Download, Move, Ratio, Info } from 'lucide-react';
 import { AIAspectRatio } from '../types';
 
 interface AIPanelProps {
@@ -80,6 +80,17 @@ const AIPanel: React.FC<AIPanelProps> = ({
       }
   }, [resultUrl]);
 
+  // Resolution helper
+  const getResolutionHint = (ratio: AIAspectRatio) => {
+      switch(ratio) {
+          case '1:1': return '1024 x 1024 px';
+          case '4:3': return '1024 x 768 px';
+          case '16:9': return '1024 x 576 px';
+          case '9:16': return '576 x 1024 px';
+          default: return '';
+      }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#1c1c1c] text-white">
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
@@ -98,7 +109,12 @@ const AIPanel: React.FC<AIPanelProps> = ({
 
             {/* Aspect Ratio Config */}
             <div>
-                 <label className="text-xs font-bold text-gray-400 mb-2 block flex items-center"><Ratio className="w-3 h-3 mr-1"/>生成比例</label>
+                 <div className="flex justify-between items-end mb-2">
+                    <label className="text-xs font-bold text-gray-400 block flex items-center"><Ratio className="w-3 h-3 mr-1"/>生成比例</label>
+                    <span className="text-[10px] text-gray-500 font-mono bg-[#111] px-1.5 py-0.5 rounded border border-gray-800">
+                        {getResolutionHint(aspectRatio)}
+                    </span>
+                 </div>
                  <div className="grid grid-cols-4 gap-2">
                      {(['1:1', '4:3', '16:9', '9:16'] as AIAspectRatio[]).map((ratio) => (
                          <button
