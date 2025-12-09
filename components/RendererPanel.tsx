@@ -26,7 +26,7 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 onClick={() => update('enablePostProcessing', !config.enablePostProcessing)}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono ${config.enablePostProcessing ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}
             >
-                {config.enablePostProcessing ? '已启用' : '已禁用'}
+                {config.enablePostProcessing ? 'ENABLED' : 'DISABLED'}
             </button>
       </div>
 
@@ -60,15 +60,15 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
              <div className="space-y-3">
                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">环境光遮蔽 (AO)</h3>
+                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Ambient Occlusion</h3>
                     <button onClick={() => update('ao', !config.ao)} className="text-gray-400 hover:text-white">
                          {config.ao ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                     </button>
                  </div>
                  {config.ao && (
                     <>
-                        <SliderControl label="遮蔽强度" value={config.aoIntensity} min={0} max={5} step={0.1} onChange={(v) => update('aoIntensity', v)} />
-                        <SliderControl label="采样半径" value={config.aoRadius} min={0.1} max={2} step={0.1} onChange={(v) => update('aoRadius', v)} />
+                        <SliderControl label="AO Intensity" value={config.aoIntensity} min={0} max={5} step={0.1} onChange={(v) => update('aoIntensity', v)} />
+                        <SliderControl label="Radius" value={config.aoRadius} min={0.1} max={2} step={0.1} onChange={(v) => update('aoRadius', v)} />
                     </>
                  )}
              </div>
@@ -79,16 +79,16 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
         {activeTab === 'Imager' && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="space-y-3">
-                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">摄像机成像</h3>
+                    <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Camera Imager</h3>
                     
-                    <SliderControl label="曝光度" value={config.exposure} min={-2} max={2} step={0.05} onChange={(v) => update('exposure', v)} />
-                    <SliderControl label="对比度" value={config.contrast} min={-1} max={1} step={0.05} onChange={(v) => update('contrast', v)} />
-                    <SliderControl label="饱和度" value={config.saturation} min={-1} max={1} step={0.05} onChange={(v) => update('saturation', v)} />
-                    <SliderControl label="亮度" value={config.brightness} min={-1} max={1} step={0.05} onChange={(v) => update('brightness', v)} />
+                    <SliderControl label="Exposure" value={config.exposure} min={-2} max={2} step={0.05} onChange={(v) => update('exposure', v)} />
+                    <SliderControl label="Contrast" value={config.contrast} min={-1} max={1} step={0.05} onChange={(v) => update('contrast', v)} />
+                    <SliderControl label="Saturation" value={config.saturation} min={-1} max={1} step={0.05} onChange={(v) => update('saturation', v)} />
+                    <SliderControl label="Brightness" value={config.brightness} min={-1} max={1} step={0.05} onChange={(v) => update('brightness', v)} />
                     
                     <div className="pt-2 border-t border-[#333] mt-2">
                         <label className="flex items-center justify-between text-[10px] text-gray-400 cursor-pointer">
-                           <span>电影级色调 (ACES)</span>
+                           <span>ACES Tone Mapping</span>
                            <input type="checkbox" checked={config.toneMapping} onChange={(e) => update('toneMapping', e.target.checked)} className="accent-orange-500" />
                         </label>
                     </div>
@@ -103,16 +103,16 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Bloom / Glare */}
                 <div>
                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">辉光 (Bloom)</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Bloom & Glare</h3>
                         <button onClick={() => update('bloom', !config.bloom)} className="text-gray-400 hover:text-white">
                              {config.bloom ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
                      </div>
                      {config.bloom && (
                         <div className="space-y-3 pl-2 border-l border-[#333]">
-                            <SliderControl label="强度" value={config.bloomIntensity} min={0} max={5} step={0.1} onChange={(v) => update('bloomIntensity', v)} />
-                            <SliderControl label="阈值" value={config.bloomThreshold} min={0} max={2} step={0.05} onChange={(v) => update('bloomThreshold', v)} />
-                            <SliderControl label="半径" value={config.bloomRadius} min={0} max={1.5} step={0.05} onChange={(v) => update('bloomRadius', v)} />
+                            <SliderControl label="Intensity" value={config.bloomIntensity} min={0} max={5} step={0.1} onChange={(v) => update('bloomIntensity', v)} />
+                            <SliderControl label="Threshold" value={config.bloomThreshold} min={0} max={2} step={0.05} onChange={(v) => update('bloomThreshold', v)} />
+                            <SliderControl label="Radius" value={config.bloomRadius} min={0} max={1.5} step={0.05} onChange={(v) => update('bloomRadius', v)} />
                         </div>
                      )}
                 </div>
@@ -120,15 +120,15 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Vignette */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">暗角 (Vignette)</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Vignette</h3>
                         <button onClick={() => update('vignette', !config.vignette)} className="text-gray-400 hover:text-white">
                              {config.vignette ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
                     </div>
                     {config.vignette && (
                         <div className="space-y-3 pl-2 border-l border-[#333]">
-                            <SliderControl label="浓度" value={config.vignetteDarkness} min={0} max={1} step={0.05} onChange={(v) => update('vignetteDarkness', v)} />
-                            <SliderControl label="范围" value={config.vignetteOffset} min={0} max={1} step={0.05} onChange={(v) => update('vignetteOffset', v)} />
+                            <SliderControl label="Darkness" value={config.vignetteDarkness} min={0} max={1} step={0.05} onChange={(v) => update('vignetteDarkness', v)} />
+                            <SliderControl label="Offset" value={config.vignetteOffset} min={0} max={1} step={0.05} onChange={(v) => update('vignetteOffset', v)} />
                         </div>
                     )}
                 </div>
@@ -136,14 +136,14 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Chromatic Aberration */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">光谱色散</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Spectral</h3>
                         <button onClick={() => update('chromaticAberration', !config.chromaticAberration)} className="text-gray-400 hover:text-white">
                              {config.chromaticAberration ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
                     </div>
                     {config.chromaticAberration && (
                          <div className="space-y-3 pl-2 border-l border-[#333]">
-                             <SliderControl label="色散强度" value={config.chromaticAberrationOffset} min={0} max={0.05} step={0.001} onChange={(v) => update('chromaticAberrationOffset', v)} />
+                             <SliderControl label="Dispersion" value={config.chromaticAberrationOffset} min={0} max={0.05} step={0.001} onChange={(v) => update('chromaticAberrationOffset', v)} />
                          </div>
                     )}
                 </div>
@@ -151,14 +151,14 @@ const RendererPanel: React.FC<RendererPanelProps> = ({ config, setConfig }) => {
                 {/* Noise */}
                  <div>
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">胶片颗粒</h3>
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Film Grain</h3>
                         <button onClick={() => update('noise', !config.noise)} className="text-gray-400 hover:text-white">
                              {config.noise ? <Eye className="w-3 h-3"/> : <EyeOff className="w-3 h-3"/>}
                         </button>
                     </div>
                     {config.noise && (
                         <div className="space-y-3 pl-2 border-l border-[#333]">
-                            <SliderControl label="颗粒量" value={config.noiseOpacity} min={0} max={0.5} step={0.01} onChange={(v) => update('noiseOpacity', v)} />
+                            <SliderControl label="Amount" value={config.noiseOpacity} min={0} max={0.5} step={0.01} onChange={(v) => update('noiseOpacity', v)} />
                         </div>
                     )}
                 </div>

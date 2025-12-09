@@ -12,7 +12,7 @@ const RenderEffects: React.FC<RenderEffectsProps> = ({ config }) => {
   if (!config.enablePostProcessing) return null;
 
   return (
-    <EffectComposer disableNormalPass={false} multisampling={4} frameBufferType={THREE.HalfFloatType}>
+    <EffectComposer multisampling={4} frameBufferType={THREE.HalfFloatType}>
       {/* 1. Ambient Occlusion (Kernel) */}
       {config.ao && (
         <N8AO 
@@ -46,7 +46,7 @@ const RenderEffects: React.FC<RenderEffectsProps> = ({ config }) => {
       {/* 4. Lens Effects (Post) */}
       {config.chromaticAberration && (
           <ChromaticAberration 
-            offset={[config.chromaticAberrationOffset, config.chromaticAberrationOffset]} 
+            offset={new THREE.Vector2(config.chromaticAberrationOffset, config.chromaticAberrationOffset)} 
             radialModulation={false}
             modulationOffset={0}
           />
@@ -64,7 +64,6 @@ const RenderEffects: React.FC<RenderEffectsProps> = ({ config }) => {
       {config.toneMapping && (
           <ToneMapping
             mode={THREE.ACESFilmicToneMapping} // ACES Filmic is standard for realistic rendering
-            exposure={Math.pow(2, config.exposure)} // Convert EV to exposure multiplier
           />
       )}
     </EffectComposer>

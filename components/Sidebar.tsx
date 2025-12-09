@@ -65,7 +65,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             <section>
             <h2 className="text-[10px] uppercase font-bold text-gray-500 mb-3 tracking-wider flex justify-between items-center">
                 <span>对象管理</span>
-                {modelData && <Trash2 className="w-3 h-3 text-gray-500 hover:text-red-500 cursor-pointer" onClick={onClearModel} title="清除模型" />}
+                {modelData && (
+                    <button 
+                        onClick={onClearModel} 
+                        className="text-gray-500 hover:text-red-500 focus:outline-none"
+                        title="清除模型"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                    </button>
+                )}
             </h2>
             
             {!modelData ? (

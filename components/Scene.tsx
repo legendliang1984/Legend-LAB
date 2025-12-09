@@ -8,7 +8,9 @@ import {
   Grid,
   ContactShadows
 } from '@react-three/drei';
+// @ts-ignore
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+// @ts-ignore
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 import { LightingConfig, ModelData, TransformMode, SceneMesh, MeshConfig, CameraConfig, CameraState, RenderConfig } from '../types';
@@ -107,7 +109,7 @@ const Model: React.FC<{
   useEffect(() => {
     const loader = modelData.type === 'glb' ? new GLTFLoader() : new OBJLoader();
     
-    loader.load(modelData.url, (loaded) => {
+    loader.load(modelData.url, (loaded: any) => {
       let group: THREE.Group;
       if (modelData.type === 'glb') {
         group = (loaded as any).scene;
@@ -145,7 +147,7 @@ const Model: React.FC<{
       
       onMeshesLoaded(foundMeshes);
       setObj(group);
-    }, undefined, (err) => console.error("Error loading model", err));
+    }, undefined, (err: any) => console.error("Error loading model", err));
   }, [modelData]);
 
   // Apply Textures & Visibility Logic
@@ -204,8 +206,8 @@ const Model: React.FC<{
                   tex.rotation = t.rotation * (Math.PI / 180);
                   tex.center.set(0.5, 0.5);
                   tex.flipY = t.flipY;
-                  tex.wrapS = t.wrapS;
-                  tex.wrapT = t.wrapT;
+                  tex.wrapS = t.wrapS as THREE.Wrapping;
+                  tex.wrapT = t.wrapT as THREE.Wrapping;
               }
           }
       });

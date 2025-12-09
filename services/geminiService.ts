@@ -1,14 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { AIAspectRatio } from "../types";
 
-// Fallback type declaration to prevent TS2688/build errors if @types/node is missing
-declare const process: {
-  env: {
-    API_KEY?: string;
-    [key: string]: string | undefined;
-  }
-};
-
 // Helper to remove data URL prefix
 const stripDataUrl = (dataUrl: string) => {
   return dataUrl.replace(/^data:image\/(png|jpeg|webp);base64,/, '');
